@@ -1,0 +1,123 @@
+STEP 1: probability tables (bonus rule off)
+ n  P_farkle  P_score       E0     S_star  S_star_hand  percent_difference  flag_over_1_percent
+ 1    0.6667   0.3333  25.0000    37.5000         37.5              0.0000                False
+ 2    0.4444   0.5556  50.0000   112.5000        112.5              0.0000                False
+ 3    0.2778   0.7222  86.8056   312.5000        312.5              0.0000                False
+ 4    0.1574   0.8426 143.5957   912.2549        912.0              0.0279                False
+ 5    0.0772   0.9228 226.1124  2930.4167       2930.0              0.0142                False
+ 6    0.0231   0.9769 425.1865 18368.0556      18368.0              0.0003                False
+
+One die with the bonus rule:
+bonus_mode  P_farkle  P_score      E0  S_star
+       off    0.6667   0.3333 25.0000 37.5000
+      once    0.6111   0.3889 29.1667 47.7273
+     chain    0.6000   0.4000 30.0000 50.0000
+[    0.0 s] Step 1 done
+
+EXPERIMENT A: adaptive(k) vs break-even, coarse grid
+bonus    k  wins    N     p     SE  CI_low  CI_high
+  off 0.00   523 1000 0.523 0.0158  0.4920   0.5540
+  off 0.25   499 1000 0.499 0.0158  0.4680   0.5300
+  off 0.50   494 1000 0.494 0.0158  0.4630   0.5250
+  off 0.75   481 1000 0.481 0.0158  0.4500   0.5120
+  off 1.00   479 1000 0.479 0.0158  0.4480   0.5100
+  off 1.25   517 1000 0.517 0.0158  0.4860   0.5480
+  off 1.50   492 1000 0.492 0.0158  0.4610   0.5230
+  off 1.75   467 1000 0.467 0.0158  0.4361   0.4979
+  off 2.00   464 1000 0.464 0.0158  0.4331   0.4949
+  off 2.25   493 1000 0.493 0.0158  0.4620   0.5240
+  off 2.50   463 1000 0.463 0.0158  0.4321   0.4939
+  off 2.75   461 1000 0.461 0.0158  0.4301   0.4919
+  off 3.00   463 1000 0.463 0.0158  0.4321   0.4939
+   on 0.00   520 1000 0.520 0.0158  0.4890   0.5510
+   on 0.25   484 1000 0.484 0.0158  0.4530   0.5150
+   on 0.50   490 1000 0.490 0.0158  0.4590   0.5210
+   on 0.75   497 1000 0.497 0.0158  0.4660   0.5280
+   on 1.00   475 1000 0.475 0.0158  0.4440   0.5060
+   on 1.25   501 1000 0.501 0.0158  0.4700   0.5320
+   on 1.50   491 1000 0.491 0.0158  0.4600   0.5220
+   on 1.75   479 1000 0.479 0.0158  0.4480   0.5100
+   on 2.00   463 1000 0.463 0.0158  0.4321   0.4939
+   on 2.25   487 1000 0.487 0.0158  0.4560   0.5180
+   on 2.50   468 1000 0.468 0.0158  0.4371   0.4989
+   on 2.75   472 1000 0.472 0.0158  0.4411   0.5029
+   on 3.00   456 1000 0.456 0.0158  0.4251   0.4869
+
+Fine grid around the best coarse k
+bonus    k  wins    N     p     SE  CI_low  CI_high
+  off 0.00   511 1000 0.511 0.0158   0.480    0.542
+  off 0.05   514 1000 0.514 0.0158   0.483    0.545
+  off 0.10   491 1000 0.491 0.0158   0.460    0.522
+  off 0.15   503 1000 0.503 0.0158   0.472    0.534
+  off 0.20   508 1000 0.508 0.0158   0.477    0.539
+  off 0.25   519 1000 0.519 0.0158   0.488    0.550
+   on 0.00   488 1000 0.488 0.0158   0.457    0.519
+   on 0.05   508 1000 0.508 0.0158   0.477    0.539
+   on 0.10   519 1000 0.519 0.0158   0.488    0.550
+   on 0.15   484 1000 0.484 0.0158   0.453    0.515
+   on 0.20   488 1000 0.488 0.0158   0.457    0.519
+   on 0.25   516 1000 0.516 0.0158   0.485    0.547
+[    3.5 s] Experiment A done
+
+EXPERIMENT B: quadratic fit p(k) = a k^2 + b k + c
+bonus       a        b       c  R_squared  k_star  k_star_used   k_range                                     note
+  off 1.08571 -0.25200 0.51429    0.60827     NaN         0.25 0 to 0.25 a >= 0, no maximum; k* = best observed k
+   on 0.08571  0.00429 0.49800    0.02505     NaN         0.10 0 to 0.25 a >= 0, no maximum; k* = best observed k
+[    4.0 s] Experiment B done
+
+EXPERIMENT C: chi-squared test of independence (new games)
+bonus  k_star  p_adaptive  p_break_even_mirror    chi2  dof  p_value  significant_at_5_percent
+  off    0.25       0.505                0.517 0.28814    1  0.59142                     False
+   on    0.10       0.467                0.469 0.00803    1  0.92858                     False
+[    4.3 s] Experiment C done
+
+EXPERIMENT D: k* against fixed-threshold opponents
+bonus      opponent  best_observed_k  best_observed_p  k_star_fit  fit_R_squared  p_at_k0
+  off  fixed(T=300)             0.50            0.639      0.2083         0.1060    0.629
+  off  fixed(T=500)             0.00            0.716     -0.0380         1.0000    0.716
+  off fixed(T=1000)             0.50            0.786      0.6132         0.1026    0.749
+  off fixed(T=2000)             0.25            0.938         NaN         0.2657    0.933
+   on  fixed(T=300)             0.50            0.624      0.5051         0.3763    0.600
+   on  fixed(T=500)             0.50            0.677      0.4856         0.7392    0.645
+   on fixed(T=1000)             0.00            0.731         NaN         1.0000    0.731
+   on fixed(T=2000)             0.25            0.908      0.3155         0.9912    0.899
+[   17.0 s] Experiment D done
+
+EXPERIMENT E: game length, mirror matches
+bonus         strategy    N  mean_turns  sd_turns  mean_rounds  sd_rounds  mean_trigger_round  bonus_triggers_per_game
+  off       break-even 1000      33.502     7.185       17.000      3.607              16.502                    0.000
+  off     fixed(T=300) 1000      38.224     6.451       19.344      3.238              18.880                    0.000
+  off     fixed(T=500) 1000      40.632     8.238       20.557      4.141              20.075                    0.000
+  off    fixed(T=1000) 1000      42.681    11.216       21.580      5.621              21.101                    0.000
+  off    fixed(T=2000) 1000      70.327    27.748       35.418     13.877              34.909                    0.000
+  off adaptive(k=0.25) 1000      33.423     7.076       16.934      3.552              16.489                    0.000
+   on       break-even 1000      33.332     6.890       16.895      3.451              16.437                    0.116
+   on     fixed(T=300) 1000      38.157     6.098       19.312      3.068              18.845                    0.105
+   on     fixed(T=500) 1000      39.254     7.752       19.861      3.887              19.393                    2.079
+   on    fixed(T=1000) 1000      41.292    11.101       20.890      5.550              20.402                    3.594
+   on    fixed(T=2000) 1000      63.075    24.845       31.781     12.437              31.294                    7.490
+   on  adaptive(k=0.1) 1000      33.911     7.124       17.169      3.569              16.742                    0.107
+
+Bonus-rule triggers logged in mirror matches: 13491 (720 on final turns)
+[   24.6 s] Experiment E done
+
+STEP 5: exact final-turn model (selected D)
+   D  P_win_bonus_off  P_win_bonus_on
+  50          0.97090         0.97090
+ 500          0.47993         0.49813
+1000          0.28301         0.29999
+2000          0.08547         0.09645
+3000          0.02927         0.03449
+5000          0.00308         0.00403
+
+Validation against simulated final turns
+bonus    D   exact  simulated    N      SE  difference  z_score  within_95_CI
+  off  500 0.47993      0.517 1000 0.01580     0.03707  2.34613         False
+  off 1000 0.28301      0.271 1000 0.01406    -0.01201 -0.85431          True
+  off 2000 0.08547      0.090 1000 0.00905     0.00453  0.50095          True
+   on  500 0.49813      0.475 1000 0.01579    -0.02313 -1.46478          True
+   on 1000 0.29999      0.304 1000 0.01455     0.00401  0.27573          True
+   on 2000 0.09645      0.099 1000 0.00944     0.00255  0.27031          True
+[   24.8 s] Step 5 done
+
+Total run time: 24.8 s. Results saved in results_quick/

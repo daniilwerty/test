@@ -1,0 +1,3 @@
+a,b,c,R_squared,k_star,bonus,points_used,k_range,k_star_used,note
+1.0857142857142796,-0.2519999999999999,0.5142857142857146,0.6082654480429184,,off,6,0 to 0.25,0.25,"a >= 0, no maximum; k* = best observed k"
+0.0857142857142889,0.0042857142857132095,0.4980000000000001,0.02504524490629978,,on,6,0 to 0.25,0.1,"a >= 0, no maximum; k* = best observed k"
