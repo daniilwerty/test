@@ -73,7 +73,7 @@ def main():
         print("EXPERIMENT A: fine grid not run (case 3 for both bonus settings)")
     step_done("Experiment A (fine grid)")
 
-    # The k used for the adaptive player in Experiments C and E.
+    # The k used for the adaptive player in Experiment C.
     test_k = {}
     test_description = {}
     for _, fit in fits.iterrows():
@@ -96,7 +96,8 @@ def main():
     step_done("Experiment D")
 
     # Experiment E
-    mirror, matrix, triggers = ex.experiment_E(folder, n_mirror, n_matrix, test_k)
+    # Experiment E uses one fixed k (ex.E_ADAPTIVE_K) for bonus off and on.
+    mirror, matrix, triggers = ex.experiment_E(folder, n_mirror, n_matrix, ex.E_ADAPTIVE_K)
     print("EXPERIMENT E: game length, mirror matches")
     print(mirror.round(3).to_string(index=False))
     print(f"\nBonus-rule triggers logged in mirror matches: {len(triggers)} "

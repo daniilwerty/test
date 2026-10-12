@@ -42,7 +42,7 @@ bonus    k  wins     N      p     SE  CI_low  CI_high
    on 2.50  9363 20000 0.4682 0.0035  0.4612   0.4751
    on 2.75  9332 20000 0.4666 0.0035  0.4597   0.4735
    on 3.00  9194 20000 0.4597 0.0035  0.4528   0.4666
-[   44.3 s] Experiment A (coarse grid) done
+[   43.1 s] Experiment A (coarse grid) done
 
 EXPERIMENT B: p(k) = a k^2 + b k + c fitted to the whole coarse grid
 bonus        a        b       c  R_squared   vertex  case  k_star  fitted_p_at_k_star
@@ -50,10 +50,10 @@ bonus        a        b       c  R_squared   vertex  case  k_star  fitted_p_at_k
    on -0.00104 -0.01099 0.50244    0.98285 -5.27373     3     0.0             0.50244
   bonus off: case 3: vertex -1.103 is outside [0, 3]; fitted p(0) = 0.5021, p(3) = 0.4555 -> k* = 0.000
   bonus on: case 3: vertex -5.274 is outside [0, 3]; fitted p(0) = 0.5024, p(3) = 0.4601 -> k* = 0.000
-[   44.3 s] Experiment B done
+[   43.1 s] Experiment B done
 
 EXPERIMENT A: fine grid not run (case 3 for both bonus settings)
-[   44.7 s] Experiment A (fine grid) done
+[   43.4 s] Experiment A (fine grid) done
 
 EXPERIMENT C: chi-squared test of independence (new games)
   bonus off: k* = 0 (case 3: vertex -1.103 is outside [0, 3]; fitted p(0) = 0.5021, p(3) = 0.4555). So the best observed coarse k (0.25) is tested against k = 0
@@ -61,7 +61,7 @@ EXPERIMENT C: chi-squared test of independence (new games)
 bonus  k_tested  p_adaptive  p_break_even_mirror    chi2  dof  p_value  significant_at_5_percent
   off      0.25     0.50005               0.5003 0.00250    1  0.96012                     False
    on      0.50     0.49595               0.4932 0.30254    1  0.58230                     False
-[   50.9 s] Experiment C done
+[   49.3 s] Experiment C done
 
 EXPERIMENT D: k = 0 and k* against fixed-threshold opponents
 bonus      opponent                     row      k  p_observed  CI_low  CI_high  p_fitted  break_even_edge_over_0.5  gain_from_adapting  best_observed_k  best_observed_p
@@ -90,25 +90,25 @@ bonus      opponent                                                             
    on  fixed(T=500)     case 3: vertex -0.053 is outside [0, 3]; fitted p(0) = 0.6669, p(3) = 0.6237
    on fixed(T=1000)     case 3: vertex -1.175 is outside [0, 3]; fitted p(0) = 0.7202, p(3) = 0.6766
    on fixed(T=2000)     case 3: vertex -3.342 is outside [0, 3]; fitted p(0) = 0.9034, p(3) = 0.8869
-[  153.9 s] Experiment D done
+[  154.6 s] Experiment D done
 
 EXPERIMENT E: game length, mirror matches
-bonus         strategy     N  mean_turns  sd_turns  mean_rounds  sd_rounds  mean_trigger_round  bonus_triggers_per_game
-  off       break-even 20000      33.676     7.096       17.074      3.564              16.602                    0.000
-  off     fixed(T=300) 20000      38.089     6.305       19.278      3.173              18.812                    0.000
-  off     fixed(T=500) 20000      40.321     8.289       20.398      4.160              19.923                    0.000
-  off    fixed(T=1000) 20000      42.942    11.337       21.715      5.678              21.227                    0.000
-  off    fixed(T=2000) 20000      69.673    28.024       35.083     14.017              34.590                    0.000
-  off adaptive(k=0.25) 20000      33.677     7.058       17.074      3.543              16.603                    0.000
-   on       break-even 20000      33.589     7.049       17.025      3.540              16.564                    0.111
-   on     fixed(T=300) 20000      38.016     6.311       19.239      3.173              18.777                    0.136
-   on     fixed(T=500) 20000      39.200     7.937       19.836      3.984              19.364                    2.097
-   on    fixed(T=1000) 20000      40.852    10.554       20.666      5.289              20.186                    3.428
-   on    fixed(T=2000) 20000      62.597    24.959       31.542     12.487              31.055                    7.335
-   on  adaptive(k=0.5) 20000      33.727     7.055       17.097      3.544              16.630                    0.120
+bonus        strategy     N  mean_turns  sd_turns  mean_rounds  sd_rounds  mean_trigger_round  bonus_triggers_per_game
+  off      break-even 20000      33.676     7.096       17.074      3.564              16.602                    0.000
+  off    fixed(T=300) 20000      38.089     6.305       19.278      3.173              18.812                    0.000
+  off    fixed(T=500) 20000      40.321     8.289       20.398      4.160              19.923                    0.000
+  off   fixed(T=1000) 20000      42.942    11.337       21.715      5.678              21.227                    0.000
+  off   fixed(T=2000) 20000      69.673    28.024       35.083     14.017              34.590                    0.000
+  off adaptive(k=0.5) 20000      33.791     6.991       17.125      3.514              16.666                    0.000
+   on      break-even 20000      33.589     7.049       17.025      3.540              16.564                    0.111
+   on    fixed(T=300) 20000      38.016     6.311       19.239      3.173              18.777                    0.136
+   on    fixed(T=500) 20000      39.200     7.937       19.836      3.984              19.364                    2.097
+   on   fixed(T=1000) 20000      40.852    10.554       20.666      5.289              20.186                    3.428
+   on   fixed(T=2000) 20000      62.597    24.959       31.542     12.487              31.055                    7.335
+   on adaptive(k=0.5) 20000      33.727     7.055       17.097      3.544              16.630                    0.120
 
 Bonus-rule triggers logged in mirror matches: 264525 (14373 on final turns)
-[  203.8 s] Experiment E done
+[  202.3 s] Experiment E done
 
 STEP 5: exact final-turn model (selected D)
    D  P_win_bonus_off  P_win_bonus_on
@@ -127,6 +127,6 @@ bonus    D   exact  simulated      N      SE  difference  z_score  within_95_CI
    on  500 0.49813    0.49973 100000 0.00158     0.00160  1.01117          True
    on 1000 0.29999    0.29861 100000 0.00145    -0.00138 -0.95308          True
    on 2000 0.09645    0.09535 100000 0.00093    -0.00110 -1.18123          True
-[  205.0 s] Step 5 done
+[  203.6 s] Step 5 done
 
-Total run time: 205.0 s. Results saved in results/
+Total run time: 203.6 s. Results saved in results/

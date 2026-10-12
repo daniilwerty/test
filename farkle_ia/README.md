@@ -2,8 +2,8 @@
 
 This project simulates two-player Farkle to answer two questions:
 
-1. Can a player who changes their risk depending on the score (the "adaptive" player) beat a player who always uses the break-even rule?
-2. How does a bonus-roll house rule change the length of a game for different play styles? (Main research question.)
+1. How does a bonus-roll house rule change the length of a game for different play styles? (Main research question.)
+2. Can a player who changes their risk depending on the score (the "adaptive" player) beat a player who always uses the break-even rule?
 
 It only uses `numpy`, `scipy`, `pandas` and `matplotlib`, plus the Python standard library.
 
@@ -25,7 +25,7 @@ Measured on a 4-core cloud machine with Python 3.13 (the code uses 1 core):
 | Run | Time |
 |---|---|
 | `python run_all.py --quick` | about 20 seconds |
-| `python run_all.py` (full) | 205 seconds (about 3.5 minutes), measured |
+| `python run_all.py` (full) | about 205 seconds (3.5 minutes), measured twice: 205.0 s and 203.6 s |
 
 One game takes about 0.1 milliseconds. Because the k* rule gave case 3, the fine grid was not run, so the full run played about 1.9 million games plus 600,000 simulated final turns. If case 2 happens (for example with a different seed or different rules), the fine grid adds up to about 1 minute.
 
@@ -103,7 +103,7 @@ With the `"chain"` bonus, a 6 on one die leads back to the same state. This give
 | `k_sweep(...)` | Plays adaptive(k) against one opponent for every k in a list. |
 | `fit_quadratic(k, p)` | Least-squares fit of p(k) = ak² + bk + c with `numpy.polyfit`. Returns a, b, c, R² and the vertex -b/(2a). |
 | `choose_k_star(k, p)` | The decision rule for k*, which was fixed before the full run (see "Decision rule for k*" below). Returns the fit, which case happened, and k*. |
-| `k_to_test(fit, coarse)` | Picks the k that Experiments C and E use for the adaptive player. This is k* when k* > 0, and otherwise the best observed coarse k (see the decision rule, step 5). |
+| `k_to_test(fit, coarse)` | Picks the k that Experiment C uses for the adaptive player. This is k* when k* > 0, and otherwise the best observed coarse k (see the decision rule, step 5). |
 | `step1_probabilities` | Saves the Step 1 tables. |
 | `experiment_A_coarse` | Coarse grid k = 0 to 3 in steps of 0.25, bonus off and on. |
 | `experiment_B` | Applies the decision rule to the whole coarse grid. |
@@ -111,7 +111,7 @@ With the `"chain"` bonus, a 6 on one die leads back to the same state. This give
 | `plot_B` | Win rate against k with 95% error bars and the fitted curve on [0, 3]. |
 | `experiment_C` | New games and the chi-squared test of independence. |
 | `experiment_D` | Coarse grid against fixed(T), for T = 300, 500, 1000 and 2000. The summary has a k = 0 row and a k* row for each opponent. |
-| `experiment_E` | Game length: mirror matches and the full matrix, the plots, and the rho histogram. |
+| `experiment_E` | Game length: mirror matches and the full matrix, the plots, and the rho histogram. The adaptive player uses `E_ADAPTIVE_K` = 0.5 in both bonus settings. |
 | `experiment_markov` | Exact final-turn curve for D = 50 to 5,000, checked against simulated final turns. |
 
 ### `run_all.py`
@@ -159,14 +159,14 @@ Runs everything in order, prints every table, and records the time each step tak
     3. Case 3: otherwise the maximum of the fitted curve on [0, 3] is at an endpoint. k* is 0 or 3, whichever has the larger fitted value. If the two are exactly equal, k* = 0. The output reports which case happened and why.
     4. The fine grid is only run in case 2. It is centred on k* rounded to the nearest 0.05, runs from centre - 0.25 to centre + 0.25 in steps of 0.05, is clipped to [0, 3], and uses new games. The fine grid is reported and plotted, but it does not change k*.
     5. If k* = 0, Experiment C uses new games to test the best observed coarse k against k = 0, and the output says so. *My addition:* if the best observed coarse k is also 0, the best observed coarse k above 0 is used.
-19. k* is rounded to 3 decimal places before it is used in C and E.
+19. k* is rounded to 3 decimal places before it is used in C.
 20. **C:** run for bonus off and on, each with its own tested k. The 2x2 table has rows (adaptive(k) vs break-even, break-even vs break-even) and columns (player A wins, player A loses). The chi-squared test uses no Yates continuity correction, the same as a GDC. Degrees of freedom = 1.
 21. **D:** N = 10,000 per k, coarse grid only, bonus off and on. k* for each opponent uses the same decision rule as B. The summary has two rows per opponent:
     - **"k = 0 (break-even rule)":** the observed win rate with its 95% CI. `break_even_edge_over_0.5` = p(0) - 0.5 is the advantage of the break-even rule itself.
     - **"k = k\* (adapting)":** the fitted win rate at k*. `gain_from_adapting` = fitted p(k*) - fitted p(0) is the extra advantage from adapting to rho.
 
     The observed p for the k* row is only shown when k* is a grid point. The best observed coarse k is also reported.
-22. **E:** the main design is mirror matches with N = 20,000. The secondary design is a full matrix with N = 5,000 per pairing. Each unordered pair is played once, because with alternating starts "X vs Y" and "Y vs X" are the same experiment. Game length is measured in turns, rounds and trigger round. *My addition:* the adaptive player in E uses the same k as in C. If k* = 0, adaptive(k*) would just be break-even again, which would give a duplicate row. The adaptive row's name shows the k actually used.
+22. **E:** the main design is mirror matches with N = 20,000. The secondary design is a full matrix with N = 5,000 per pairing. Each unordered pair is played once, because with alternating starts "X vs Y" and "Y vs X" are the same experiment. Game length is measured in turns, rounds and trigger round. The adaptive player in E uses one fixed k = 0.5 (`E_ADAPTIVE_K` in `experiments.py`) for both bonus settings, in the mirror matches and in the full matrix (your decision). This way the "on - off" change for the adaptive row compares the same strategy. k* = 0 could not be used, because adaptive(0) is just break-even again. k = 0.5 is the k tested in Experiment C with the bonus on.
 23. **E, rho histogram:** the triggers come from the mirror matches. On a final turn rho is undefined (see 14). So final-turn triggers are shown in a separate panel by their deficit D instead of rho. Normal-turn triggers with rho > 5 are counted in the plot title but not drawn, so the main shape stays readable. All values are in `E_bonus_triggers.csv`.
 24. **Step 5 check:** simulated final turns start with own banked score 0 and opponent score D, so the chaser needs S > D. N = 100,000 per D in the full run.
 25. The quick run uses N = 1,000 for everything, including the Markov check.
@@ -247,9 +247,9 @@ The break-even rule itself carries almost all of the advantage. Adapting to rho 
 | fixed(T=500) | 40.32 (8.29) | 39.20 (7.94) | -1.12 |
 | fixed(T=1000) | 42.94 (11.34) | 40.85 (10.55) | -2.09 |
 | fixed(T=2000) | 69.67 (28.02) | 62.60 (24.96) | -7.08 |
-| adaptive | 33.68 (k = 0.25) | 33.73 (k = 0.5) | +0.05 |
+| adaptive (k = 0.5) | 33.79 (6.99) | 33.73 (7.06) | -0.06 |
 
-The 95% CI of each change is about ±0.14 turns for break-even and ±0.5 turns for T = 2000, so the effect is significant for T = 500, 1000 and 2000. The bonus rule shortens games mainly for players who often roll a single die, which is what high fixed thresholds do. Break-even players almost never roll one die: they averaged 0.11 bonus triggers per game, compared with 7.3 per game at T = 2000. Note that the adaptive row compares two different k values, because the tested k differs between bonus off and on (see assumption 22).
+The 95% CI of each change is about ±0.14 turns for break-even and ±0.5 turns for T = 2000, so the effect is significant for T = 500, 1000 and 2000. The bonus rule shortens games mainly for players who often roll a single die, which is what high fixed thresholds do. Break-even players almost never roll one die: they averaged 0.11 bonus triggers per game, compared with 7.3 per game at T = 2000. The adaptive player (k = 0.5) behaves like break-even here. Its change is -0.06 turns, with a 95% CI of -0.20 to +0.07 (z = -0.91), so it is not significant. It averaged 0.12 bonus triggers per game.
 
 ### Step 5: exact final-turn model
 

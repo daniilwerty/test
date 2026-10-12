@@ -37,6 +37,7 @@ BONUS_SETTINGS = {"off": "off", "on": "chain"}
 COARSE_K_GRID = [round(0.25 * i, 2) for i in range(13)]   # 0, 0.25, ..., 3
 FIXED_T_VALUES = [300, 500, 1000, 2000]
 K_MIN, K_MAX = 0.0, 3.0          # the range of k that is searched
+E_ADAPTIVE_K = 0.5               # k of the adaptive player in Experiment E (both bonus settings)
 Z_95 = 1.959964   # z value for a 95% confidence interval
 
 
@@ -293,7 +294,7 @@ def plot_B(folder, coarse_all, fine_all, fits):
 
 def k_to_test(fit, coarse):
     """
-    Which k Experiments C and E use for the adaptive player.
+    Which k Experiment C uses for the adaptive player.
 
     If k* > 0, it is k*. If k* = 0, adaptive(k*) would be the break-even
     player itself, so the best observed coarse k is used instead, to test
@@ -440,8 +441,9 @@ def experiment_D(folder, n_games):
 
 def strategy_list(adaptive_k):
     """
-    The six strategies compared in Experiment E. adaptive_k is the k from
-    k_to_test(): k* if k* > 0, otherwise the k tested in Experiment C.
+    The six strategies compared in Experiment E. adaptive_k is E_ADAPTIVE_K,
+    the same k for bonus off and on, so the "on - off" change for the
+    adaptive row compares the same strategy.
     """
     return ([("break-even", None)] + [("fixed", T) for T in FIXED_T_VALUES]
             + [("adaptive", adaptive_k)])
@@ -454,7 +456,7 @@ def length_summary(games):
             "mean_trigger_round": games["trigger_round"].mean()}
 
 
-def experiment_E(folder, n_mirror, n_matrix, adaptive_k_by_bonus):
+def experiment_E(folder, n_mirror, n_matrix, adaptive_k=E_ADAPTIVE_K):
     """
     Main design: mirror matches (both players use the same strategy).
     Secondary design: every strategy against every other one.
@@ -468,7 +470,7 @@ def experiment_E(folder, n_mirror, n_matrix, adaptive_k_by_bonus):
 
     for bonus_label in BONUS_SETTINGS:
         settings = make_settings(bonus_label)
-        specs = strategy_list(adaptive_k_by_bonus[bonus_label])
+        specs = strategy_list(adaptive_k)
         players = [make_strategy(kind, value, settings) for kind, value in specs]
 
         # Main design: mirror matches.
@@ -530,9 +532,6 @@ def _plot_game_length(folder, mirror):
     on = mirror[mirror["bonus"] == "on"].reset_index(drop=True)
     # Names line up because both lists are built in the same order.
     names = list(off["strategy"])
-    if on["strategy"].iloc[-1] != names[-1]:
-        # The adaptive k can differ between bonus off and on.
-        names[-1] = f"{names[-1]} / {on['strategy'].iloc[-1]}"
     x = np.arange(len(names))
 
     se_off = off["sd_turns"] / np.sqrt(off["N"])

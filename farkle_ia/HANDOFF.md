@@ -52,6 +52,7 @@ Files:
    - Main design: mirror matches (both players use the same strategy), N = 20,000 each.
    - Secondary design: a full matrix of every strategy against every other one, N = 5,000 per pairing.
    - Both designs with the bonus rule off and on.
+   - The adaptive player uses one k = 0.5 in both bonus settings (mirror matches and the full matrix), so the "on - off" change compares the same strategy. Because k* = 0, adaptive(k*) would just be break-even again. k = 0.5 is the k tested in Experiment C with the bonus on.
 5. Decision rule for k* (fixed before the full run):
    1. Fit p(k) = ak^2 + bk + c to the whole coarse grid (k = 0 to 3 in steps of 0.25).
    2. Case 2: if a < 0 and -b/(2a) is in [0, 3], then k* = -b/(2a).
@@ -63,10 +64,8 @@ Files:
 ## 5. Choices made by Claude that I have not yet confirmed
 
 1. Experiment C, bonus on: the best observed coarse k was 0 itself. So the best k above 0 (k = 0.5) was tested against k = 0.
-2. Experiment E: because k* = 0, adaptive(k*) would just be break-even again. The adaptive row instead uses the k tested in C: 0.25 with the bonus off and 0.5 with the bonus on. This means the "on - off" change for the adaptive row compares two different k values.
-   - Open question: re-run E with one k for both settings, or drop the adaptive row? Re-running E takes about 50 s.
-3. On a final turn rho is undefined (division by zero), so final-turn bonus triggers are shown in a separate histogram panel by their deficit D instead of rho.
-4. The chi-squared test uses no Yates correction, the same as a GDC.
+2. On a final turn rho is undefined (division by zero), so final-turn bonus triggers are shown in a separate histogram panel by their deficit D instead of rho.
+3. The chi-squared test uses no Yates correction, the same as a GDC.
 
 ## 6. Results (full run, seed 2026)
 
@@ -119,9 +118,10 @@ The break-even rule itself carries the advantage. Adapting adds nothing measurab
 | fixed T = 500 | 40.32 (8.29) | 39.20 (7.94) | -1.12 |
 | fixed T = 1000 | 42.94 (11.34) | 40.85 (10.55) | -2.09 |
 | fixed T = 2000 | 69.67 (28.02) | 62.60 (24.96) | -7.08 |
-| adaptive | 33.68 (k = 0.25) | 33.73 (k = 0.5) | +0.05 (different k values) |
+| adaptive (k = 0.5) | 33.79 (6.99) | 33.73 (7.06) | -0.06 (not significant) |
 
 - The bonus rule shortens games mainly for high fixed thresholds, because those players often roll a single die. Bonus triggers per game: break-even 0.11, T = 300 0.14, T = 500 2.10, T = 1000 3.43, T = 2000 7.34.
+- For the adaptive row the 95% CI of the change is -0.20 to +0.07 turns (z = -0.91), so the bonus rule has no significant effect on its game length, the same as for break-even. It triggered the bonus rule 0.12 times per game.
 - Rounds follow the same pattern (rounds = about half the turns).
 - The full strategy-vs-strategy matrices are in `results/E_matrix_mean_turns_bonus_off.csv` and `results/E_matrix_mean_turns_bonus_on.csv`.
 
@@ -148,9 +148,8 @@ All 6 checks against 100,000 simulated final turns fall inside the 95% CI. The l
 
 ## 8. Next steps
 
-1. Decide the open question in section 5.2 (Experiment E adaptive row).
-2. Write the IA. A possible order: Farkle rules, then the probability tables and break-even derivation, then strategies, then the simulation method, then the results of A to E, then the Markov model and its check, then conclusion and limitations.
-3. Limitations worth discussing:
+1. Write the IA. A possible order: Farkle rules, then the probability tables and break-even derivation, then strategies, then the simulation method, then the results of A to E, then the Markov model and its check, then conclusion and limitations.
+2. Limitations worth discussing:
    - S*_n only looks one roll ahead.
    - Strategies only depend on S, n, B and L.
    - Players always set aside every scoring die.
