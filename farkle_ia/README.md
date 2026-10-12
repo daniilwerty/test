@@ -24,10 +24,10 @@ Measured on a 4-core cloud machine with Python 3.13 (the code uses 1 core):
 
 | Run | Time |
 |---|---|
-| `python run_all.py --quick` | about 22 seconds |
-| `python run_all.py` (full) | about 5 to 8 minutes (estimate from the quick run; will be replaced with the measured time after the full run) |
+| `python run_all.py --quick` | about 20 seconds |
+| `python run_all.py` (full) | 205 seconds (about 3.5 minutes), measured |
 
-One game takes about 0.1 milliseconds. The full run plays about 2.5 million games.
+One game takes about 0.1 milliseconds. Because the k* rule gave case 3, the fine grid was not run, so the full run played about 1.9 million games plus 600,000 simulated final turns. If case 2 happens (for example with a different seed or different rules), the fine grid adds up to about 1 minute.
 
 ## Reproducibility
 
@@ -173,18 +173,91 @@ Runs everything in order, prints every table, and records the time each step tak
 
 ## Summary of key results
 
-**Quick test run only (N = 1,000). These are not final results.** With N = 1,000 the 95% CI is about ±0.031, so the win rates in this table cannot be told apart. This table will be replaced after the full run.
+These are from the full run (seed 2026). The complete printed output is in `results/full_run_output.txt`.
 
-| Result | Bonus off | Bonus on (chain) |
+### Step 1: probability tables
+
+| n | P(farkle) | E(0) | S*_n | Hand value | Difference |
+|---|---|---|---|---|---|
+| 1 | 0.6667 | 25.00 | 37.50 | 37.5 | 0.00% |
+| 2 | 0.4444 | 50.00 | 112.50 | 112.5 | 0.00% |
+| 3 | 0.2778 | 86.81 | 312.50 | 312.5 | 0.00% |
+| 4 | 0.1574 | 143.60 | 912.25 | 912 | 0.03% |
+| 5 | 0.0772 | 226.11 | 2930.42 | 2930 | 0.01% |
+| 6 | 0.0231 | 425.19 | 18368.06 | 18368 | 0.00% |
+
+No value differs by more than 1%. For one die with the bonus rule:
+
+| Bonus mode | P(farkle) | E(0) | S*_1 |
+|---|---|---|---|
+| once | 0.6111 | 29.17 | 47.73 |
+| chain | 0.6000 | 30.00 | 50.00 |
+
+### Experiments A and B: finding k (adaptive(k) vs break-even, N = 20,000 per k)
+
+| | Bonus off | Bonus on (chain) |
 |---|---|---|
-| S*_1 | 37.5 | 50.0 |
-| S*_2 to S*_6 | 112.5, 312.5, 912.25, 2930.42, 18368.06 | same |
-| All S*_n within 1% of hand values | yes (largest difference 0.03%) | — |
-| k* (quadratic fit) | no maximum in quick run (a > 0) | no maximum in quick run (a > 0) |
-| Chi-squared p-value (C) | not significant (quick run) | not significant (quick run) |
-| Mean game length, break-even mirror | 33.5 turns | 33.3 turns |
-| Mean game length, fixed T = 2000 mirror | 70.3 turns | 63.1 turns |
-| P(win final turn), D = 1000 (exact) | 0.2830 | 0.3000 |
-| Markov check | 5 of 6 within 95% CI at N = 1,000 | |
+| p at k = 0 (95% CI) | 0.5000 (0.4931 to 0.5070) | 0.5025 (0.4956 to 0.5094) |
+| p at k = 3 (95% CI) | 0.4559 (0.4490 to 0.4628) | 0.4597 (0.4528 to 0.4666) |
+| Fit p(k) = ak² + bk + c | a = -0.00298, b = -0.00658, c = 0.50213 | a = -0.00104, b = -0.01099, c = 0.50244 |
+| R² | 0.984 | 0.983 |
+| Vertex -b/(2a) | -1.103 | -5.274 |
+| Case | 3 (vertex outside [0, 3]) | 3 (vertex outside [0, 3]) |
+| **k\*** | **0** | **0** |
+| Fine grid | not run | not run |
 
-Full quick-run output: `results_quick/quick_run_output.txt`.
+The win rate falls steadily as k increases, so adapting to rho does not help against a break-even opponent.
+
+### Experiment C: chi-squared test (new games, N = 20,000 per matchup)
+
+k* = 0 for both settings, so the best observed coarse k was tested against k = 0. With the bonus off this was k = 0.25. With the bonus on, the best observed k was 0 itself, so the best k above 0 was used: k = 0.5.
+
+| | Bonus off | Bonus on |
+|---|---|---|
+| k tested | 0.25 | 0.5 |
+| p, adaptive(k) vs break-even | 0.50005 | 0.49595 |
+| p, break-even vs break-even | 0.50030 | 0.49320 |
+| χ² (df = 1) | 0.0025 | 0.303 |
+| p-value | 0.960 | 0.582 |
+| Significant at 5%? | no | no |
+
+### Experiment D: against fixed-threshold opponents (N = 10,000 per k)
+
+"Break-even edge" is p(0) - 0.5, the advantage of the break-even rule itself. "Gain from adapting" is fitted p(k*) - fitted p(0).
+
+| Opponent | Bonus | p at k = 0 (95% CI) | Break-even edge | k* (case) | Gain from adapting |
+|---|---|---|---|---|---|
+| fixed(T=300) | off | 0.621 (0.611 to 0.630) | +0.121 | 0 (3) | 0 |
+| fixed(T=500) | off | 0.694 (0.685 to 0.703) | +0.194 | 0 (3) | 0 |
+| fixed(T=1000) | off | 0.758 (0.750 to 0.767) | +0.258 | 0 (3) | 0 |
+| fixed(T=2000) | off | 0.930 (0.925 to 0.935) | +0.430 | 0 (3) | 0 |
+| fixed(T=300) | on | 0.613 (0.604 to 0.623) | +0.113 | 0.231 (2) | +0.0003 |
+| fixed(T=500) | on | 0.661 (0.652 to 0.671) | +0.161 | 0 (3) | 0 |
+| fixed(T=1000) | on | 0.721 (0.712 to 0.730) | +0.221 | 0 (3) | 0 |
+| fixed(T=2000) | on | 0.903 (0.897 to 0.909) | +0.403 | 0 (3) | 0 |
+
+The break-even rule itself carries almost all of the advantage. Adapting to rho adds nothing measurable.
+
+### Experiment E: game length, mirror matches (N = 20,000 each)
+
+| Strategy | Mean turns, bonus off (SD) | Mean turns, bonus on (SD) | Change, on - off |
+|---|---|---|---|
+| break-even | 33.68 (7.10) | 33.59 (7.05) | -0.09 |
+| fixed(T=300) | 38.09 (6.31) | 38.02 (6.31) | -0.07 |
+| fixed(T=500) | 40.32 (8.29) | 39.20 (7.94) | -1.12 |
+| fixed(T=1000) | 42.94 (11.34) | 40.85 (10.55) | -2.09 |
+| fixed(T=2000) | 69.67 (28.02) | 62.60 (24.96) | -7.08 |
+| adaptive | 33.68 (k = 0.25) | 33.73 (k = 0.5) | +0.05 |
+
+The 95% CI of each change is about ±0.14 turns for break-even and ±0.5 turns for T = 2000, so the effect is significant for T = 500, 1000 and 2000. The bonus rule shortens games mainly for players who often roll a single die, which is what high fixed thresholds do. Break-even players almost never roll one die: they averaged 0.11 bonus triggers per game, compared with 7.3 per game at T = 2000. Note that the adaptive row compares two different k values, because the tested k differs between bonus off and on (see assumption 22).
+
+### Step 5: exact final-turn model
+
+| D | P(win), bonus off | P(win), bonus on |
+|---|---|---|
+| 500 | 0.4799 | 0.4981 |
+| 1000 | 0.2830 | 0.3000 |
+| 2000 | 0.0855 | 0.0965 |
+| 5000 | 0.0031 | 0.0040 |
+
+All 6 checks against 100,000 simulated final turns fall inside the 95% CI. The largest |z| was 1.18.

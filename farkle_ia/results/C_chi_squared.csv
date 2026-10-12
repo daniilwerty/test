@@ -1,0 +1,3 @@
+bonus,k_tested,what_is_tested,p_adaptive,p_break_even_mirror,chi2,dof,p_value,significant_at_5_percent
+off,0.25,"k* = 0 (case 3: vertex -1.103 is outside [0, 3]; fitted p(0) = 0.5021, p(3) = 0.4555). So the best observed coarse k (0.25) is tested against k = 0",0.50005,0.5003,0.0025000003062500375,1,0.9601223858827859,False
+on,0.5,"k* = 0 (case 3: vertex -5.274 is outside [0, 3]; fitted p(0) = 0.5024, p(3) = 0.4601). So the best observed coarse k above 0 (0.5), because the best observed coarse k was 0 itself, is tested against k = 0",0.49595,0.4932,0.30253561524896616,1,0.5822971670993407,False
