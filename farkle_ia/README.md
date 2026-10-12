@@ -101,12 +101,16 @@ With the `"chain"` bonus, a 6 on one die leads back to the same state. This give
 | `play_match(A, B, N, settings, label)` | Plays N games and alternates who starts (A starts the even-numbered games). Returns a game table, a bonus-trigger table and a large-rho table. |
 | `win_rate_summary(games)` | Wins, N, p, SE = sqrt(p(1 - p)/N), and the 95% CI p ± 1.96 SE. |
 | `k_sweep(...)` | Plays adaptive(k) against one opponent for every k in a list. |
-| `fit_quadratic(k, p)` | Least-squares fit of p(k) = ak² + bk + c with `numpy.polyfit`. Returns a, b, c, R² and k* = -b/(2a). |
+| `fit_quadratic(k, p)` | Least-squares fit of p(k) = ak² + bk + c with `numpy.polyfit`. Returns a, b, c, R² and the vertex -b/(2a). |
+| `choose_k_star(k, p)` | The decision rule for k*, which was fixed before the full run (see "Decision rule for k*" below). Returns the fit, which case happened, and k*. |
+| `k_to_test(fit, coarse)` | Picks the k that Experiments C and E use for the adaptive player. This is k* when k* > 0, and otherwise the best observed coarse k (see the decision rule, step 5). |
 | `step1_probabilities` | Saves the Step 1 tables. |
-| `experiment_A` | Coarse grid k = 0 to 3 in steps of 0.25, then a fine grid in steps of 0.05 from best k - 0.25 to best k + 0.25. Bonus off and on. |
-| `experiment_B` | Quadratic fit to the fine-grid points, plus plots. |
+| `experiment_A_coarse` | Coarse grid k = 0 to 3 in steps of 0.25, bonus off and on. |
+| `experiment_B` | Applies the decision rule to the whole coarse grid. |
+| `experiment_A_fine` | Fine grid in steps of 0.05 around k*, only where case 2 happened. |
+| `plot_B` | Win rate against k with 95% error bars and the fitted curve on [0, 3]. |
 | `experiment_C` | New games and the chi-squared test of independence. |
-| `experiment_D` | Coarse grid against fixed(T), for T = 300, 500, 1000 and 2000. |
+| `experiment_D` | Coarse grid against fixed(T), for T = 300, 500, 1000 and 2000. The summary has a k = 0 row and a k* row for each opponent. |
 | `experiment_E` | Game length: mirror matches and the full matrix, the plots, and the rho histogram. |
 | `experiment_markov` | Exact final-turn curve for D = 50 to 5,000, checked against simulated final turns. |
 
@@ -149,11 +153,20 @@ Runs everything in order, prints every table, and records the time each step tak
 ### Experiments
 
 17. In every match, adaptive(k) is player A and the opponent is player B. A starts the even-numbered games and B the odd-numbered ones, so each starts exactly N/2 games. The win rate p is A's win rate.
-18. **A:** the fine grid runs in steps of 0.05 from best coarse k - 0.25 to best coarse k + 0.25, never below 0. It uses new games, not the coarse-grid games.
-19. **B:** "points near the peak" means the fine-grid points. If the fit gives a >= 0 (a curve with no maximum), k* is undefined. In that case the best observed fine-grid k is used for C and E, and the table says so. k* is rounded to 3 decimal places before it is used.
-20. **C:** run for bonus off and on, each with its own k*. The 2x2 table has rows (adaptive(k*) vs break-even, break-even vs break-even) and columns (player A wins, player A loses). The chi-squared test uses no Yates continuity correction, the same as a GDC. Degrees of freedom = 1.
-21. **D:** N = 10,000 per k, coarse grid only, bonus off and on. k* for each opponent comes from a quadratic fit to the best coarse k and its neighbours within ±0.5 (up to 5 points). The best observed k is also reported, because a 5-point fit on a noisy curve can be unreliable.
-22. **E:** the main design is mirror matches with N = 20,000. The secondary design is a full matrix with N = 5,000 per pairing. Each unordered pair is played once, because with alternating starts "X vs Y" and "Y vs X" are the same experiment. adaptive(k*) uses the k* for the matching bonus setting. Game length is measured in turns, rounds and trigger round.
+18. **Decision rule for k\*** (your rule, fixed before the full run):
+    1. Fit p(k) = ak² + bk + c to the whole coarse grid (k = 0 to 3, 13 points).
+    2. Case 2: if a < 0 and -b/(2a) lies in [0, 3], then k* = -b/(2a).
+    3. Case 3: otherwise the maximum of the fitted curve on [0, 3] is at an endpoint. k* is 0 or 3, whichever has the larger fitted value. If the two are exactly equal, k* = 0. The output reports which case happened and why.
+    4. The fine grid is only run in case 2. It is centred on k* rounded to the nearest 0.05, runs from centre - 0.25 to centre + 0.25 in steps of 0.05, is clipped to [0, 3], and uses new games. The fine grid is reported and plotted, but it does not change k*.
+    5. If k* = 0, Experiment C uses new games to test the best observed coarse k against k = 0, and the output says so. *My addition:* if the best observed coarse k is also 0, the best observed coarse k above 0 is used.
+19. k* is rounded to 3 decimal places before it is used in C and E.
+20. **C:** run for bonus off and on, each with its own tested k. The 2x2 table has rows (adaptive(k) vs break-even, break-even vs break-even) and columns (player A wins, player A loses). The chi-squared test uses no Yates continuity correction, the same as a GDC. Degrees of freedom = 1.
+21. **D:** N = 10,000 per k, coarse grid only, bonus off and on. k* for each opponent uses the same decision rule as B. The summary has two rows per opponent:
+    - **"k = 0 (break-even rule)":** the observed win rate with its 95% CI. `break_even_edge_over_0.5` = p(0) - 0.5 is the advantage of the break-even rule itself.
+    - **"k = k\* (adapting)":** the fitted win rate at k*. `gain_from_adapting` = fitted p(k*) - fitted p(0) is the extra advantage from adapting to rho.
+
+    The observed p for the k* row is only shown when k* is a grid point. The best observed coarse k is also reported.
+22. **E:** the main design is mirror matches with N = 20,000. The secondary design is a full matrix with N = 5,000 per pairing. Each unordered pair is played once, because with alternating starts "X vs Y" and "Y vs X" are the same experiment. Game length is measured in turns, rounds and trigger round. *My addition:* the adaptive player in E uses the same k as in C. If k* = 0, adaptive(k*) would just be break-even again, which would give a duplicate row. The adaptive row's name shows the k actually used.
 23. **E, rho histogram:** the triggers come from the mirror matches. On a final turn rho is undefined (see 14). So final-turn triggers are shown in a separate panel by their deficit D instead of rho. Normal-turn triggers with rho > 5 are counted in the plot title but not drawn, so the main shape stays readable. All values are in `E_bonus_triggers.csv`.
 24. **Step 5 check:** simulated final turns start with own banked score 0 and opponent score D, so the chaser needs S > D. N = 100,000 per D in the full run.
 25. The quick run uses N = 1,000 for everything, including the Markov check.

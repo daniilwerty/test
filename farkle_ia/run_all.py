@@ -47,38 +47,56 @@ def main():
     print(bonus.round(4).to_string(index=False))
     step_done("Step 1")
 
-    # Experiment A
-    coarse, fine = ex.experiment_A(folder, n_A)
+    # Experiment A (coarse grid)
+    coarse = ex.experiment_A_coarse(folder, n_A)
     columns = ["bonus", "k", "wins", "N", "p", "SE", "CI_low", "CI_high"]
     print("EXPERIMENT A: adaptive(k) vs break-even, coarse grid")
     print(coarse[columns].round(4).to_string(index=False))
-    print("\nFine grid around the best coarse k")
-    print(fine[columns].round(4).to_string(index=False))
-    step_done("Experiment A")
+    step_done("Experiment A (coarse grid)")
 
-    # Experiment B
-    fits = ex.experiment_B(folder, coarse, fine)
-    print("EXPERIMENT B: quadratic fit p(k) = a k^2 + b k + c")
-    print(fits[["bonus", "a", "b", "c", "R_squared", "k_star", "k_star_used",
-                "k_range", "note"]].round(5).to_string(index=False))
-    k_star = {row["bonus"]: round(float(row["k_star_used"]), 3)
-              for _, row in fits.iterrows()}
+    # Experiment B (fit to the whole coarse grid and the decision rule for k*)
+    fits = ex.experiment_B(folder, coarse)
+    print("EXPERIMENT B: p(k) = a k^2 + b k + c fitted to the whole coarse grid")
+    print(fits[["bonus", "a", "b", "c", "R_squared", "vertex", "case", "k_star",
+                "fitted_p_at_k_star"]].round(5).to_string(index=False))
+    for _, fit in fits.iterrows():
+        print(f"  bonus {fit['bonus']}: {fit['case_description']} -> k* = {fit['k_star']:.3f}")
     step_done("Experiment B")
 
+    # Experiment A (fine grid, only where case 2 happened)
+    fine = ex.experiment_A_fine(folder, n_A, fits)
+    ex.plot_B(folder, coarse, fine, fits)
+    if len(fine):
+        print("EXPERIMENT A: fine grid around k* (case 2 only)")
+        print(fine[columns].round(4).to_string(index=False))
+    else:
+        print("EXPERIMENT A: fine grid not run (case 3 for both bonus settings)")
+    step_done("Experiment A (fine grid)")
+
+    # The k used for the adaptive player in Experiments C and E.
+    test_k = {}
+    test_description = {}
+    for _, fit in fits.iterrows():
+        part = coarse[coarse["bonus"] == fit["bonus"]]
+        test_k[fit["bonus"]], test_description[fit["bonus"]] = ex.k_to_test(fit, part)
+
     # Experiment C
-    chi = ex.experiment_C(folder, n_C, k_star)
+    chi = ex.experiment_C(folder, n_C, test_k, test_description)
     print("EXPERIMENT C: chi-squared test of independence (new games)")
-    print(chi.round(5).to_string(index=False))
+    for _, row in chi.iterrows():
+        print(f"  bonus {row['bonus']}: {row['what_is_tested']}")
+    print(chi.drop(columns="what_is_tested").round(5).to_string(index=False))
     step_done("Experiment C")
 
     # Experiment D
     robust = ex.experiment_D(folder, n_D)
-    print("EXPERIMENT D: k* against fixed-threshold opponents")
-    print(robust.round(4).to_string(index=False))
+    print("EXPERIMENT D: k = 0 and k* against fixed-threshold opponents")
+    print(robust.drop(columns="case").round(4).to_string(index=False))
+    print(robust.loc[robust["case"] != "", ["bonus", "opponent", "case"]].to_string(index=False))
     step_done("Experiment D")
 
     # Experiment E
-    mirror, matrix, triggers = ex.experiment_E(folder, n_mirror, n_matrix, k_star)
+    mirror, matrix, triggers = ex.experiment_E(folder, n_mirror, n_matrix, test_k)
     print("EXPERIMENT E: game length, mirror matches")
     print(mirror.round(3).to_string(index=False))
     print(f"\nBonus-rule triggers logged in mirror matches: {len(triggers)} "

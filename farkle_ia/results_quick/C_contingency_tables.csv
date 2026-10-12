@@ -1,5 +1,5 @@
 bonus,matchup,A_wins,A_losses,expected_A_wins,expected_A_losses
-off,adaptive(k=0.25) vs break-even,505,495,511.0,489.0
-off,break-even vs break-even,517,483,511.0,489.0
-on,adaptive(k=0.1) vs break-even,467,533,468.0,532.0
-on,break-even vs break-even,469,531,468.0,532.0
+off,adaptive(k=1.25) vs break-even (k=0),485,515,501.0,499.0
+off,break-even vs break-even,517,483,501.0,499.0
+on,adaptive(k=1.25) vs break-even (k=0),486,514,477.5,522.5
+on,break-even vs break-even,469,531,477.5,522.5

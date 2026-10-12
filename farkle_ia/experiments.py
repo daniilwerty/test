@@ -5,8 +5,10 @@ Each experiment function saves its results as CSV files and its plots as
 PNG files in an output folder, and returns the main numbers so run_all.py
 can print a summary.
 
-    experiment_A  find the best k (coarse grid, then a finer grid)
-    experiment_B  fit a quadratic p(k) = a k^2 + b k + c near the peak
+    experiment_A_coarse  win rate of adaptive(k) on the coarse grid
+    experiment_B         quadratic fit to the whole coarse grid and the
+                         decision rule for k* (choose_k_star)
+    experiment_A_fine    finer grid around k*, only if k* is inside [0, 3]
     experiment_C  chi-squared test on brand new games
     experiment_D  robustness against fixed-threshold opponents
     experiment_E  game length (mirror matches and a full matrix)
@@ -34,6 +36,7 @@ BONUS_SETTINGS = {"off": "off", "on": "chain"}
 
 COARSE_K_GRID = [round(0.25 * i, 2) for i in range(13)]   # 0, 0.25, ..., 3
 FIXED_T_VALUES = [300, 500, 1000, 2000]
+K_MIN, K_MAX = 0.0, 3.0          # the range of k that is searched
 Z_95 = 1.959964   # z value for a 95% confidence interval
 
 
@@ -132,8 +135,8 @@ def fit_quadratic(k_values, win_rates):
     """
     Least-squares fit of p(k) = a k^2 + b k + c.
 
-    Returns a, b, c, R^2 and k* = -b / (2a), the k at the top of the parabola.
-    If a >= 0 the parabola has no maximum, so k* is set to NaN.
+    Returns a, b, c, R^2 and the vertex -b / (2a) (the turning point of the
+    parabola). The vertex is NaN if a = 0.
 
     R^2 = 1 - (sum of squared residuals) / (total sum of squares).
     """
@@ -144,8 +147,50 @@ def fit_quadratic(k_values, win_rates):
     ss_residual = float(((p - predicted) ** 2).sum())
     ss_total = float(((p - p.mean()) ** 2).sum())
     r_squared = 1 - ss_residual / ss_total if ss_total > 0 else np.nan
-    k_star = -b / (2 * a) if a < 0 else np.nan
-    return {"a": a, "b": b, "c": c, "R_squared": r_squared, "k_star": k_star}
+    vertex = -b / (2 * a) if a != 0 else np.nan
+    return {"a": a, "b": b, "c": c, "R_squared": r_squared, "vertex": vertex}
+
+
+def choose_k_star(k_values, win_rates):
+    """
+    The decision rule for k*, fixed before the full run:
+
+    1. Fit p(k) = a k^2 + b k + c to the whole coarse grid (k = 0 to 3).
+    2. If a < 0 and the vertex -b/(2a) lies in [0, 3], then k* = -b/(2a).
+       This is "case 2" (a maximum inside the range).
+    3. Otherwise the maximum of the fitted curve on [0, 3] is at an end
+       point, so k* is 0 or 3, whichever has the larger FITTED value
+       p(0) = c or p(3) = 9a + 3b + c. This is "case 3". If the two are
+       exactly equal, k* = 0 is chosen (the simpler strategy).
+    """
+    fit = fit_quadratic(k_values, win_rates)
+    a, b, c, vertex = fit["a"], fit["b"], fit["c"], fit["vertex"]
+
+    def fitted_p(k):
+        return a * k ** 2 + b * k + c
+
+    if a < 0 and K_MIN <= vertex <= K_MAX:
+        case = 2
+        k_star = vertex
+        reason = "a < 0 and vertex inside [0, 3]"
+    else:
+        case = 3
+        k_star = K_MIN if fitted_p(K_MIN) >= fitted_p(K_MAX) else K_MAX
+        if a >= 0:
+            reason = "a >= 0, so the curve has no maximum"
+        else:
+            reason = f"vertex {vertex:.3f} is outside [0, 3]"
+        reason += f"; fitted p(0) = {fitted_p(K_MIN):.4f}, p(3) = {fitted_p(K_MAX):.4f}"
+
+    fit.update({
+        "case": case,
+        "case_description": f"case {case}: {reason}",
+        "k_star": k_star,
+        "fitted_p_at_k_star": fitted_p(k_star),
+        "fitted_p_at_0": fitted_p(K_MIN),
+        "fitted_p_at_3": fitted_p(K_MAX),
+    })
+    return fit
 
 
 # ---------------------------------------------------------------------------
@@ -161,75 +206,83 @@ def step1_probabilities(folder):
 
 
 # ---------------------------------------------------------------------------
-# Experiment A: finding k
+# Experiment A (coarse grid) and B (curve fit and decision rule for k*)
 # ---------------------------------------------------------------------------
 
-def experiment_A(folder, n_games):
-    """
-    Adaptive(k) vs break-even for k = 0, 0.25, ..., 3, then a finer grid
-    (steps of 0.05) from best k - 0.25 to best k + 0.25. Done with the bonus
-    rule off and on. The fine grid uses new games.
-    """
-    coarse_tables = []
-    fine_tables = []
-    for bonus_label in BONUS_SETTINGS:
-        coarse = k_sweep(COARSE_K_GRID, "break-even", None, n_games, bonus_label,
-                         "A coarse")
-        best_k = coarse.loc[coarse["p"].idxmax(), "k"]
-        # Steps of 0.05 from best_k - 0.25 to best_k + 0.25, never below 0.
-        fine_grid = [round(best_k + 0.05 * step, 2) for step in range(-5, 6)
-                     if best_k + 0.05 * step >= -1e-9]
-        fine_grid = [abs(k) for k in fine_grid]   # turn -0.0 into 0.0
-        fine = k_sweep(fine_grid, "break-even", None, n_games, bonus_label, "A fine")
-        fine["best_coarse_k"] = best_k
-        coarse_tables.append(coarse)
-        fine_tables.append(fine)
-
-    coarse_all = pd.concat(coarse_tables, ignore_index=True)
-    fine_all = pd.concat(fine_tables, ignore_index=True)
+def experiment_A_coarse(folder, n_games):
+    """Adaptive(k) vs break-even for k = 0, 0.25, ..., 3, bonus off and on."""
+    coarse_all = pd.concat(
+        [k_sweep(COARSE_K_GRID, "break-even", None, n_games, bonus_label, "A coarse")
+         for bonus_label in BONUS_SETTINGS],
+        ignore_index=True)
     save_csv(coarse_all, folder, "A_coarse_grid.csv")
-    save_csv(fine_all, folder, "A_fine_grid.csv")
-    return coarse_all, fine_all
+    return coarse_all
 
 
-# ---------------------------------------------------------------------------
-# Experiment B: quadratic fit near the peak
-# ---------------------------------------------------------------------------
-
-def experiment_B(folder, coarse_all, fine_all):
+def experiment_B(folder, coarse_all):
     """
-    Fit p(k) = a k^2 + b k + c to the fine-grid points (the points near the
-    peak) and plot win rate against k with 95% error bars and the fitted curve.
+    Apply the decision rule (choose_k_star) to the whole coarse grid, for
+    bonus off and on. Returns one row per bonus setting with a, b, c, R^2,
+    the vertex, which case happened, and k*.
     """
     fits = []
     for bonus_label in BONUS_SETTINGS:
-        fine = fine_all[fine_all["bonus"] == bonus_label]
         coarse = coarse_all[coarse_all["bonus"] == bonus_label]
-        fit = fit_quadratic(fine["k"], fine["p"])
+        fit = choose_k_star(coarse["k"], coarse["p"])
         fit["bonus"] = bonus_label
-        fit["points_used"] = len(fine)
-        fit["k_range"] = f"{fine['k'].min():g} to {fine['k'].max():g}"
-        if math.isnan(fit["k_star"]):
-            # No maximum in the fitted curve: fall back to the best observed k.
-            fit["k_star_used"] = float(fine.loc[fine["p"].idxmax(), "k"])
-            fit["note"] = "a >= 0, no maximum; k* = best observed k"
-        else:
-            fit["k_star_used"] = fit["k_star"]
-            fit["note"] = ""
+        fit["points_used"] = len(coarse)
         fits.append(fit)
+    fits = pd.DataFrame(fits)
+    save_csv(fits, folder, "B_quadratic_fit_and_k_star.csv")
+    return fits
+
+
+def experiment_A_fine(folder, n_games, fits):
+    """
+    Fine grid (steps of 0.05), only for a bonus setting where case 2
+    happened. It is centred on k* rounded to the nearest 0.05, runs from
+    centre - 0.25 to centre + 0.25, and is clipped to [0, 3]. New games.
+    """
+    tables = []
+    for _, fit in fits.iterrows():
+        if fit["case"] != 2:
+            continue
+        centre = round(fit["k_star"] / 0.05) * 0.05
+        fine_grid = [round(centre + 0.05 * step, 2) for step in range(-5, 6)]
+        fine_grid = [abs(k) for k in fine_grid if K_MIN - 1e-9 <= k <= K_MAX + 1e-9]
+        fine = k_sweep(fine_grid, "break-even", None, n_games, fit["bonus"], "A fine")
+        fine["centre"] = centre
+        tables.append(fine)
+
+    if tables:
+        fine_all = pd.concat(tables, ignore_index=True)
+    else:
+        fine_all = pd.DataFrame(columns=["k", "bonus", "p", "SE"])
+    save_csv(fine_all, folder, "A_fine_grid.csv")
+    return fine_all
+
+
+def plot_B(folder, coarse_all, fine_all, fits):
+    """Win rate against k with 95% error bars and the fitted curve on [0, 3]."""
+    for _, fit in fits.iterrows():
+        bonus_label = fit["bonus"]
+        coarse = coarse_all[coarse_all["bonus"] == bonus_label]
+        fine = fine_all[fine_all["bonus"] == bonus_label]
 
         figure, axis = plt.subplots(figsize=(7, 4.5))
         axis.errorbar(coarse["k"], coarse["p"], yerr=Z_95 * coarse["SE"], fmt="o",
-                      color="grey", alpha=0.6, capsize=3, label="coarse grid (95% CI)")
-        axis.errorbar(fine["k"], fine["p"], yerr=Z_95 * fine["SE"], fmt="o",
-                      color="tab:blue", capsize=3, label="fine grid (95% CI)")
-        k_line = np.linspace(fine["k"].min(), fine["k"].max(), 200)
+                      color="tab:blue", capsize=3, label="coarse grid (95% CI)")
+        if len(fine):
+            axis.errorbar(fine["k"], fine["p"], yerr=Z_95 * fine["SE"], fmt="s",
+                          color="tab:orange", markersize=4, capsize=2,
+                          label="fine grid (95% CI)")
+        k_line = np.linspace(K_MIN, K_MAX, 300)
         axis.plot(k_line, fit["a"] * k_line ** 2 + fit["b"] * k_line + fit["c"],
                   color="tab:red",
                   label=f"fit: {fit['a']:.4f}k² {fit['b']:+.4f}k {fit['c']:+.4f}"
                         f"  (R² = {fit['R_squared']:.3f})")
-        axis.axvline(fit["k_star_used"], color="tab:red", linestyle=":",
-                     label=f"k* = {fit['k_star_used']:.3f}")
+        axis.axvline(fit["k_star"], color="tab:red", linestyle=":",
+                     label=f"k* = {fit['k_star']:.3f} (case {fit['case']})")
         axis.axhline(0.5, color="black", linewidth=0.8)
         axis.set_xlabel("k")
         axis.set_ylabel("win rate of adaptive(k) vs break-even")
@@ -237,18 +290,39 @@ def experiment_B(folder, coarse_all, fine_all):
         axis.legend(fontsize=8)
         save_plot(figure, folder, f"B_win_rate_vs_k_bonus_{bonus_label}.png")
 
-    fits = pd.DataFrame(fits)
-    save_csv(fits, folder, "B_quadratic_fit.csv")
-    return fits
+
+def k_to_test(fit, coarse):
+    """
+    Which k Experiments C and E use for the adaptive player.
+
+    If k* > 0, it is k*. If k* = 0, adaptive(k*) would be the break-even
+    player itself, so the best observed coarse k is used instead, to test
+    "does adapting help?". If the best observed coarse k is also 0, the best
+    observed coarse k above 0 is used.
+    """
+    k_star = float(fit["k_star"])
+    if k_star > 0:
+        return round(k_star, 3), f"k* = {k_star:.3f} from the decision rule ({fit['case_description']})"
+    best_k = float(coarse.loc[coarse["p"].idxmax(), "k"])
+    if best_k > 0:
+        which = f"the best observed coarse k ({best_k:g})"
+    else:
+        above_zero = coarse[coarse["k"] > 0]
+        best_k = float(above_zero.loc[above_zero["p"].idxmax(), "k"])
+        which = (f"the best observed coarse k above 0 ({best_k:g}), because the "
+                 f"best observed coarse k was 0 itself,")
+    return best_k, (f"k* = 0 ({fit['case_description']}). So {which} "
+                    f"is tested against k = 0")
 
 
 # ---------------------------------------------------------------------------
 # Experiment C: chi-squared test of independence on new games
 # ---------------------------------------------------------------------------
 
-def experiment_C(folder, n_games, k_star_by_bonus):
+def experiment_C(folder, n_games, test_k_by_bonus, description_by_bonus):
     """
-    New games: adaptive(k*) vs break-even, and break-even vs break-even.
+    New games: adaptive(k) vs break-even, and break-even vs break-even,
+    where k is chosen by k_to_test().
     2x2 table:            player A wins   player A loses
         adaptive vs BE         ...             ...
         BE vs BE               ...             ...
@@ -259,8 +333,8 @@ def experiment_C(folder, n_games, k_star_by_bonus):
     tables = []
     for bonus_label in BONUS_SETTINGS:
         settings = make_settings(bonus_label)
-        k_star = k_star_by_bonus[bonus_label]
-        adaptive = make_strategy("adaptive", k_star, settings)
+        k_test = test_k_by_bonus[bonus_label]
+        adaptive = make_strategy("adaptive", k_test, settings)
         break_even = make_strategy("break-even", None, settings)
 
         games_1, _, _ = play_match(adaptive, break_even, n_games, settings,
@@ -276,11 +350,12 @@ def experiment_C(folder, n_games, k_star_by_bonus):
 
         tables.append(pd.DataFrame({
             "bonus": bonus_label,
-            "matchup": [f"{adaptive.name} vs break-even", "break-even vs break-even"],
+            "matchup": [f"{adaptive.name} vs break-even (k=0)", "break-even vs break-even"],
             "A_wins": observed[:, 0], "A_losses": observed[:, 1],
             "expected_A_wins": expected[:, 0], "expected_A_losses": expected[:, 1],
         }))
-        rows.append({"bonus": bonus_label, "k_star": k_star,
+        rows.append({"bonus": bonus_label, "k_tested": k_test,
+                     "what_is_tested": description_by_bonus[bonus_label],
                      "p_adaptive": wins_1 / n_games, "p_break_even_mirror": wins_2 / n_games,
                      "chi2": chi2, "dof": dof, "p_value": p_value,
                      "significant_at_5_percent": p_value < 0.05})
@@ -298,9 +373,15 @@ def experiment_C(folder, n_games, k_star_by_bonus):
 def experiment_D(folder, n_games):
     """
     Coarse k grid against fixed(T) for T = 300, 500, 1000, 2000, bonus off
-    and on. k* for each opponent comes from a quadratic fit to the best
-    coarse k and its neighbours (5 points: best k +/- 0.5); the best observed
-    k is reported as well.
+    and on. k* for each opponent uses the same decision rule as Experiment B.
+
+    The summary has two rows per opponent:
+        "k = 0 (break-even rule)": observed win rate of break-even vs fixed(T).
+            How far this is above 0.5 is the advantage of the break-even
+            rule itself.
+        "k = k* (adapting)": the decision-rule k* and its fitted win rate.
+            gain_from_adapting = fitted p(k*) - fitted p(0) is the extra
+            advantage of adapting to rho.
     """
     sweeps = []
     summary = []
@@ -308,18 +389,30 @@ def experiment_D(folder, n_games):
         for T in FIXED_T_VALUES:
             sweep = k_sweep(COARSE_K_GRID, "fixed", T, n_games, bonus_label, "D")
             sweeps.append(sweep)
+            fit = choose_k_star(sweep["k"], sweep["p"])
+            at_zero = sweep[sweep["k"] == 0].iloc[0]
+            best = sweep.loc[sweep["p"].idxmax()]
+            common = {"bonus": bonus_label, "opponent": f"fixed(T={T})"}
 
-            best_index = sweep["p"].idxmax()
-            best_k = sweep.loc[best_index, "k"]
-            near = sweep[(sweep["k"] >= best_k - 0.5 - 1e-9) &
-                         (sweep["k"] <= best_k + 0.5 + 1e-9)]
-            fit = fit_quadratic(near["k"], near["p"])
-            summary.append({
-                "bonus": bonus_label, "opponent": f"fixed(T={T})",
-                "best_observed_k": best_k, "best_observed_p": sweep.loc[best_index, "p"],
-                "k_star_fit": fit["k_star"], "fit_R_squared": fit["R_squared"],
-                "p_at_k0": sweep.loc[sweep["k"] == 0, "p"].iloc[0],
-            })
+            summary.append({**common, "row": "k = 0 (break-even rule)", "k": 0.0,
+                            "p_observed": at_zero["p"], "CI_low": at_zero["CI_low"],
+                            "CI_high": at_zero["CI_high"],
+                            "p_fitted": fit["fitted_p_at_0"],
+                            "break_even_edge_over_0.5": at_zero["p"] - 0.5,
+                            "gain_from_adapting": np.nan, "case": ""})
+
+            # Observed values for k* only exist if k* is a grid point.
+            on_grid = sweep[np.isclose(sweep["k"], fit["k_star"])]
+            summary.append({**common, "row": "k = k* (adapting)", "k": fit["k_star"],
+                            "p_observed": on_grid["p"].iloc[0] if len(on_grid) else np.nan,
+                            "CI_low": on_grid["CI_low"].iloc[0] if len(on_grid) else np.nan,
+                            "CI_high": on_grid["CI_high"].iloc[0] if len(on_grid) else np.nan,
+                            "p_fitted": fit["fitted_p_at_k_star"],
+                            "break_even_edge_over_0.5": np.nan,
+                            "gain_from_adapting": fit["fitted_p_at_k_star"] - fit["fitted_p_at_0"],
+                            "case": fit["case_description"]})
+            summary[-1]["best_observed_k"] = best["k"]
+            summary[-1]["best_observed_p"] = best["p"]
 
     sweeps = pd.concat(sweeps, ignore_index=True)
     summary = pd.DataFrame(summary)
@@ -345,10 +438,13 @@ def experiment_D(folder, n_games):
 # Experiment E: game length
 # ---------------------------------------------------------------------------
 
-def strategy_list(k_star):
-    """The six strategies compared in Experiment E."""
+def strategy_list(adaptive_k):
+    """
+    The six strategies compared in Experiment E. adaptive_k is the k from
+    k_to_test(): k* if k* > 0, otherwise the k tested in Experiment C.
+    """
     return ([("break-even", None)] + [("fixed", T) for T in FIXED_T_VALUES]
-            + [("adaptive", k_star)])
+            + [("adaptive", adaptive_k)])
 
 
 def length_summary(games):
@@ -358,7 +454,7 @@ def length_summary(games):
             "mean_trigger_round": games["trigger_round"].mean()}
 
 
-def experiment_E(folder, n_mirror, n_matrix, k_star_by_bonus):
+def experiment_E(folder, n_mirror, n_matrix, adaptive_k_by_bonus):
     """
     Main design: mirror matches (both players use the same strategy).
     Secondary design: every strategy against every other one.
@@ -372,7 +468,7 @@ def experiment_E(folder, n_mirror, n_matrix, k_star_by_bonus):
 
     for bonus_label in BONUS_SETTINGS:
         settings = make_settings(bonus_label)
-        specs = strategy_list(k_star_by_bonus[bonus_label])
+        specs = strategy_list(adaptive_k_by_bonus[bonus_label])
         players = [make_strategy(kind, value, settings) for kind, value in specs]
 
         # Main design: mirror matches.
@@ -433,8 +529,10 @@ def _plot_game_length(folder, mirror):
     off = mirror[mirror["bonus"] == "off"].reset_index(drop=True)
     on = mirror[mirror["bonus"] == "on"].reset_index(drop=True)
     # Names line up because both lists are built in the same order.
-    names = [name if not name.startswith("adaptive") else "adaptive(k*)"
-             for name in off["strategy"]]
+    names = list(off["strategy"])
+    if on["strategy"].iloc[-1] != names[-1]:
+        # The adaptive k can differ between bonus off and on.
+        names[-1] = f"{names[-1]} / {on['strategy'].iloc[-1]}"
     x = np.arange(len(names))
 
     se_off = off["sd_turns"] / np.sqrt(off["N"])

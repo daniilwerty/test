@@ -42,46 +42,55 @@ bonus    k  wins    N     p     SE  CI_low  CI_high
    on 2.50   468 1000 0.468 0.0158  0.4371   0.4989
    on 2.75   472 1000 0.472 0.0158  0.4411   0.5029
    on 3.00   456 1000 0.456 0.0158  0.4251   0.4869
+[    2.2 s] Experiment A (coarse grid) done
 
-Fine grid around the best coarse k
-bonus    k  wins    N     p     SE  CI_low  CI_high
-  off 0.00   511 1000 0.511 0.0158   0.480    0.542
-  off 0.05   514 1000 0.514 0.0158   0.483    0.545
-  off 0.10   491 1000 0.491 0.0158   0.460    0.522
-  off 0.15   503 1000 0.503 0.0158   0.472    0.534
-  off 0.20   508 1000 0.508 0.0158   0.477    0.539
-  off 0.25   519 1000 0.519 0.0158   0.488    0.550
-   on 0.00   488 1000 0.488 0.0158   0.457    0.519
-   on 0.05   508 1000 0.508 0.0158   0.477    0.539
-   on 0.10   519 1000 0.519 0.0158   0.488    0.550
-   on 0.15   484 1000 0.484 0.0158   0.453    0.515
-   on 0.20   488 1000 0.488 0.0158   0.457    0.519
-   on 0.25   516 1000 0.516 0.0158   0.485    0.547
-[    3.5 s] Experiment A done
+EXPERIMENT B: p(k) = a k^2 + b k + c fitted to the whole coarse grid
+bonus        a        b       c  R_squared   vertex  case  k_star  fitted_p_at_k_star
+  off  0.00149 -0.02024 0.51002    0.54670   6.8078     3     0.0             0.51002
+   on -0.00008 -0.01312 0.50324    0.56851 -82.1000     3     0.0             0.50324
+  bonus off: case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.5100, p(3) = 0.4627 -> k* = 0.000
+  bonus on: case 3: vertex -82.100 is outside [0, 3]; fitted p(0) = 0.5032, p(3) = 0.4632 -> k* = 0.000
+[    2.2 s] Experiment B done
 
-EXPERIMENT B: quadratic fit p(k) = a k^2 + b k + c
-bonus       a        b       c  R_squared  k_star  k_star_used   k_range                                     note
-  off 1.08571 -0.25200 0.51429    0.60827     NaN         0.25 0 to 0.25 a >= 0, no maximum; k* = best observed k
-   on 0.08571  0.00429 0.49800    0.02505     NaN         0.10 0 to 0.25 a >= 0, no maximum; k* = best observed k
-[    4.0 s] Experiment B done
+EXPERIMENT A: fine grid not run (case 3 for both bonus settings)
+[    2.6 s] Experiment A (fine grid) done
 
 EXPERIMENT C: chi-squared test of independence (new games)
-bonus  k_star  p_adaptive  p_break_even_mirror    chi2  dof  p_value  significant_at_5_percent
-  off    0.25       0.505                0.517 0.28814    1  0.59142                     False
-   on    0.10       0.467                0.469 0.00803    1  0.92858                     False
-[    4.3 s] Experiment C done
+  bonus off: k* = 0 (case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.5100, p(3) = 0.4627). So the best observed coarse k above 0 (1.25), because the best observed coarse k was 0 itself, is tested against k = 0
+  bonus on: k* = 0 (case 3: vertex -82.100 is outside [0, 3]; fitted p(0) = 0.5032, p(3) = 0.4632). So the best observed coarse k above 0 (1.25), because the best observed coarse k was 0 itself, is tested against k = 0
+bonus  k_tested  p_adaptive  p_break_even_mirror    chi2  dof  p_value  significant_at_5_percent
+  off      1.25       0.485                0.517 2.04801    1  0.15241                     False
+   on      1.25       0.486                0.469 0.57917    1  0.44664                     False
+[    3.0 s] Experiment C done
 
-EXPERIMENT D: k* against fixed-threshold opponents
-bonus      opponent  best_observed_k  best_observed_p  k_star_fit  fit_R_squared  p_at_k0
-  off  fixed(T=300)             0.50            0.639      0.2083         0.1060    0.629
-  off  fixed(T=500)             0.00            0.716     -0.0380         1.0000    0.716
-  off fixed(T=1000)             0.50            0.786      0.6132         0.1026    0.749
-  off fixed(T=2000)             0.25            0.938         NaN         0.2657    0.933
-   on  fixed(T=300)             0.50            0.624      0.5051         0.3763    0.600
-   on  fixed(T=500)             0.50            0.677      0.4856         0.7392    0.645
-   on fixed(T=1000)             0.00            0.731         NaN         1.0000    0.731
-   on fixed(T=2000)             0.25            0.908      0.3155         0.9912    0.899
-[   17.0 s] Experiment D done
+EXPERIMENT D: k = 0 and k* against fixed-threshold opponents
+bonus      opponent                     row      k  p_observed  CI_low  CI_high  p_fitted  break_even_edge_over_0.5  gain_from_adapting  best_observed_k  best_observed_p
+  off  fixed(T=300) k = 0 (break-even rule) 0.0000       0.629  0.5991   0.6589    0.6231                     0.129                 NaN              NaN              NaN
+  off  fixed(T=300)       k = k* (adapting) 0.0000       0.629  0.5991   0.6589    0.6231                       NaN              0.0000             0.50            0.639
+  off  fixed(T=500) k = 0 (break-even rule) 0.0000       0.716  0.6881   0.7439    0.7057                     0.216                 NaN              NaN              NaN
+  off  fixed(T=500)       k = k* (adapting) 0.0000       0.716  0.6881   0.7439    0.7057                       NaN              0.0000             0.00            0.716
+  off fixed(T=1000) k = 0 (break-even rule) 0.0000       0.749  0.7221   0.7759    0.7597                     0.249                 NaN              NaN              NaN
+  off fixed(T=1000)       k = k* (adapting) 0.0000       0.749  0.7221   0.7759    0.7597                       NaN              0.0000             0.50            0.786
+  off fixed(T=2000) k = 0 (break-even rule) 0.0000       0.933  0.9175   0.9485    0.9331                     0.433                 NaN              NaN              NaN
+  off fixed(T=2000)       k = k* (adapting) 0.0000       0.933  0.9175   0.9485    0.9331                       NaN              0.0000             0.25            0.938
+   on  fixed(T=300) k = 0 (break-even rule) 0.0000       0.600  0.5696   0.6304    0.6001                     0.100                 NaN              NaN              NaN
+   on  fixed(T=300)       k = k* (adapting) 0.8518         NaN     NaN      NaN    0.6069                       NaN              0.0068             0.50            0.624
+   on  fixed(T=500) k = 0 (break-even rule) 0.0000       0.645  0.6153   0.6747    0.6568                     0.145                 NaN              NaN              NaN
+   on  fixed(T=500)       k = k* (adapting) 0.4902         NaN     NaN      NaN    0.6580                       NaN              0.0012             0.50            0.677
+   on fixed(T=1000) k = 0 (break-even rule) 0.0000       0.731  0.7035   0.7585    0.7247                     0.231                 NaN              NaN              NaN
+   on fixed(T=1000)       k = k* (adapting) 0.0000       0.731  0.7035   0.7585    0.7247                       NaN              0.0000             0.00            0.731
+   on fixed(T=2000) k = 0 (break-even rule) 0.0000       0.899  0.8803   0.9177    0.9049                     0.399                 NaN              NaN              NaN
+   on fixed(T=2000)       k = k* (adapting) 0.0000       0.899  0.8803   0.9177    0.9049                       NaN              0.0000             0.25            0.908
+bonus      opponent                                                                             case
+  off  fixed(T=300)    case 3: vertex -29.149 is outside [0, 3]; fitted p(0) = 0.6231, p(3) = 0.5775
+  off  fixed(T=500) case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.7057, p(3) = 0.6828
+  off fixed(T=1000)     case 3: vertex -2.032 is outside [0, 3]; fitted p(0) = 0.7597, p(3) = 0.7275
+  off fixed(T=2000) case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.9331, p(3) = 0.9248
+   on  fixed(T=300)                                           case 2: a < 0 and vertex inside [0, 3]
+   on  fixed(T=500)                                           case 2: a < 0 and vertex inside [0, 3]
+   on fixed(T=1000) case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.7247, p(3) = 0.6678
+   on fixed(T=2000) case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.9049, p(3) = 0.8837
+[   13.9 s] Experiment D done
 
 EXPERIMENT E: game length, mirror matches
 bonus         strategy    N  mean_turns  sd_turns  mean_rounds  sd_rounds  mean_trigger_round  bonus_triggers_per_game
@@ -90,16 +99,16 @@ bonus         strategy    N  mean_turns  sd_turns  mean_rounds  sd_rounds  mean_
   off     fixed(T=500) 1000      40.632     8.238       20.557      4.141              20.075                    0.000
   off    fixed(T=1000) 1000      42.681    11.216       21.580      5.621              21.101                    0.000
   off    fixed(T=2000) 1000      70.327    27.748       35.418     13.877              34.909                    0.000
-  off adaptive(k=0.25) 1000      33.423     7.076       16.934      3.552              16.489                    0.000
+  off adaptive(k=1.25) 1000      34.185     7.120       17.334      3.565              16.851                    0.000
    on       break-even 1000      33.332     6.890       16.895      3.451              16.437                    0.116
    on     fixed(T=300) 1000      38.157     6.098       19.312      3.068              18.845                    0.105
    on     fixed(T=500) 1000      39.254     7.752       19.861      3.887              19.393                    2.079
    on    fixed(T=1000) 1000      41.292    11.101       20.890      5.550              20.402                    3.594
    on    fixed(T=2000) 1000      63.075    24.845       31.781     12.437              31.294                    7.490
-   on  adaptive(k=0.1) 1000      33.911     7.124       17.169      3.569              16.742                    0.107
+   on adaptive(k=1.25) 1000      34.568     6.851       17.513      3.444              17.055                    0.200
 
-Bonus-rule triggers logged in mirror matches: 13491 (720 on final turns)
-[   24.6 s] Experiment E done
+Bonus-rule triggers logged in mirror matches: 13584 (707 on final turns)
+[   20.1 s] Experiment E done
 
 STEP 5: exact final-turn model (selected D)
    D  P_win_bonus_off  P_win_bonus_on
@@ -118,6 +127,6 @@ bonus    D   exact  simulated    N      SE  difference  z_score  within_95_CI
    on  500 0.49813      0.475 1000 0.01579    -0.02313 -1.46478          True
    on 1000 0.29999      0.304 1000 0.01455     0.00401  0.27573          True
    on 2000 0.09645      0.099 1000 0.00944     0.00255  0.27031          True
-[   24.8 s] Step 5 done
+[   20.2 s] Step 5 done
 
-Total run time: 24.8 s. Results saved in results_quick/
+Total run time: 20.2 s. Results saved in results_quick/

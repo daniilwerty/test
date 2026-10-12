@@ -1,3 +1,3 @@
-bonus,k_star,p_adaptive,p_break_even_mirror,chi2,dof,p_value,significant_at_5_percent
-off,0.25,0.505,0.517,0.28813945949839725,1,0.5914152825823387,False
-on,0.1,0.467,0.469,0.008032902769744875,1,0.9285840550429278,False
+bonus,k_tested,what_is_tested,p_adaptive,p_break_even_mirror,chi2,dof,p_value,significant_at_5_percent
+off,1.25,"k* = 0 (case 3: a >= 0, so the curve has no maximum; fitted p(0) = 0.5100, p(3) = 0.4627). So the best observed coarse k above 0 (1.25), because the best observed coarse k was 0 itself, is tested against k = 0",0.485,0.517,2.0480081920327677,1,0.1524054637602725,False
+on,1.25,"k* = 0 (case 3: vertex -82.100 is outside [0, 3]; fitted p(0) = 0.5032, p(3) = 0.4632). So the best observed coarse k above 0 (1.25), because the best observed coarse k was 0 itself, is tested against k = 0",0.486,0.469,0.5791728249705654,1,0.4466367298874503,False
